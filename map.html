@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bản đồ ATM</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        #searchBox {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            width: 250px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        #locateButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #locateButton:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="searchBox">
+        <input type="text" id="searchInput" placeholder="Tìm kiếm ATM hoặc Ngân hàng..." />
+    </div>
+
+    <!-- Nút "Hiển thị vị trí hiện tại" -->
+    <button id="locateButton">📍</button>
+
+    <!-- Bản đồ -->
+    <div id="map"></div>
+
+    <script>
+        // Tạo bản đồ
+        const map = L.map('map').setView([21.028511, 105.804817], 13); // Tọa độ mặc định (Hà Nội)
+
+        // Thêm layer bản đồ từ OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        let userMarker = null; // Marker cho vị trí hiện tại
+        let routingControl = null; // Đối tượng Routing Machine
+
+        // Tạo icon tùy chỉnh cho vị trí người dùng
+        const userIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3177/3177361.png',
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+        });
+
+        // Hàm thêm marker ATM
+        function addMarker(atm) {
+            const marker = L.marker([atm.latitude, atm.longitude])
+                .addTo(map)
+                .bindPopup(`
+                    <b>${atm.name}</b><br>
+                    Ngân hàng: ${atm.bank.name}<br>
+                    Địa chỉ: ${atm.dia_chi || 'Chưa có địa chỉ'}<br>
+                    <button onclick="getDirections(${atm.latitude}, ${atm.longitude})">Chỉ đường</button>
+                `);
+        }
+
+        // Hàm chỉ đường
+        function getDirections(lat, lng) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const { latitude, longitude } = position.coords;
+
+                        // Xóa tuyến đường cũ nếu tồn tại
+                        if (routingControl) {
+                            map.removeControl(routingControl);
+                        }
+
+                        // Tạo tuyến đường mới
+                        routingControl = L.Routing.control({
+                            waypoints: [
+                                L.latLng(latitude, longitude), // Vị trí hiện tại
+                                L.latLng(lat, lng)             // Vị trí ATM
+                            ],
+                            routeWhileDragging: true,
+                        }).addTo(map);
+                    },
+                    error => {
+                        alert('Không thể lấy vị trí hiện tại: ' + error.message);
+                    }
+                );
+            } else {
+                alert('Trình duyệt của bạn không hỗ trợ định vị.');
+            }
+        }
+
+        // Hiển thị vị trí hiện tại
+        document.getElementById('locateButton').addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const { latitude, longitude } = position.coords;
+
+                        // Thêm hoặc cập nhật marker cho vị trí người dùng
+                        if (userMarker) {
+                            userMarker.setLatLng([latitude, longitude]).openPopup();
+                        } else {
+                            userMarker = L.marker([latitude, longitude], { icon: userIcon })
+                                .addTo(map)
+                                .bindPopup('Vị trí hiện tại của bạn')
+                                .openPopup();
+                        }
+
+                        // Zoom vào vị trí hiện tại
+                        map.setView([latitude, longitude], 16);
+                    },
+                    error => {
+                        alert('Không thể lấy vị trí hiện tại: ' + error.message);
+                    },
+                    {
+                        enableHighAccuracy: true, // Yêu cầu độ chính xác cao
+                        timeout: 10000,          // Thời gian chờ tối đa (10 giây)
+                        maximumAge: 0            // Không sử dụng vị trí cũ
+                    }
+                );
+            } else {
+                alert('Trình duyệt của bạn không hỗ trợ định vị.');
+            }
+        });
+
+        // Lấy danh sách ATM từ API
+        fetch('http://localhost:5000/api/atm')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(atm => addMarker(atm));
+            })
+            .catch(err => console.error('Lỗi khi lấy dữ liệu ATM:', err));
+    </script>
+</body>
+</html>

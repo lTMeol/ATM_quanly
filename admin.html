@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ATM Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #4CAF50;
+            color: white;
+        }
+        form {
+            background-color: white;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background-color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .actions button {
+            margin-left: 10px;
+        }
+        .actions button.edit {
+            background-color: #ff9800;
+        }
+        .actions button.delete {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>ATM Management</h1>
+    
+    <!-- Form thêm ATM -->
+    <h2>Thêm ATM</h2>
+    <form id="addATMForm">
+        <label>Tên ATM:</label>
+        <input type="text" id="atmName" required>
+        <br>
+        <label>Địa chỉ:</label>
+        <input type="text" id="atmAddress" required>
+        <br>
+        <label>Vĩ độ:</label>
+        <input type="text" id="atmLatitude" required>
+        <br>
+        <label>Kinh độ:</label>
+        <input type="text" id="atmLongitude" required>
+        <br>
+        <label>Ngân hàng:</label>
+        <select id="bankSelect" required></select>
+        <br>
+        <button type="submit">Thêm ATM</button>
+    </form>
+
+    <h2>Danh sách ATM</h2>
+    <ul id="atmList"></ul>
+
+    <script>
+        const apiUrl = "http://localhost:5000/api";
+
+        // Lấy danh sách ngân hàng
+        fetch(`${apiUrl}/bank`)
+            .then(response => response.json())
+            .then(data => {
+                const bankSelect = document.getElementById("bankSelect");
+
+                if (data && data.length > 0) {
+                    data.forEach(bank => {
+                        const option = document.createElement("option");
+                        option.value = bank.id;
+                        option.textContent = bank.name;
+                        bankSelect.appendChild(option);
+                    });
+                } else {
+                    alert('Không có ngân hàng nào.');
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching banks:", error);
+                alert("Không thể tải danh sách ngân hàng. Vui lòng thử lại.");
+            });
+
+        // Thêm ATM
+        document.getElementById("addATMForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const atmData = {
+                name: document.getElementById("atmName").value,
+                dia_chi: document.getElementById("atmAddress").value,
+                latitude: parseFloat(document.getElementById("atmLatitude").value),
+                longitude: parseFloat(document.getElementById("atmLongitude").value),
+                bank_id: parseInt(document.getElementById("bankSelect").value)
+            };
+
+            if (isNaN(atmData.latitude) || isNaN(atmData.longitude)) {
+                alert("Vĩ độ và kinh độ phải là số hợp lệ.");
+                return;
+            }
+
+            // Thêm ATM vào cơ sở dữ liệu
+            fetch(`${apiUrl}/atm`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(atmData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                loadATMs(); // Reload ATM list after adding a new one
+            })
+            .catch(error => {
+                console.error("Error adding ATM:", error);
+                alert("Có lỗi xảy ra khi thêm ATM. Vui lòng thử lại.");
+            });
+        });
+
+        // Lấy danh sách ATM
+        function loadATMs() {
+            fetch(`${apiUrl}/atm`)
+                .then(response => response.json())
+                .then(data => {
+                    const atmList = document.getElementById("atmList");
+                    atmList.innerHTML = ""; // Clear previous list
+                    data.forEach(atm => {
+                        const listItem = document.createElement("li");
+                        listItem.innerHTML = `
+                            <span>${atm.name} (${atm.bank.name}) - Địa chỉ: ${atm.dia_chi || 'Không có địa chỉ'} - Vĩ độ: ${atm.latitude}, Kinh độ: ${atm.longitude}</span>
+                            <div class="actions">
+                                <button class="edit" onclick="editATM(${atm.id})">Sửa</button>
+                                <button class="delete" onclick="deleteATM(${atm.id})">Xóa</button>
+                            </div>
+                        `;
+                        atmList.appendChild(listItem);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching ATMs:", error);
+                    alert("Không thể tải danh sách ATM. Vui lòng thử lại.");
+                });
+        }
+
+        // Sửa ATM
+        function editATM(atmId) {
+    fetch(`${apiUrl}/atm/${atmId}`)  // Gọi API GET với atmId
+        .then(response => response.json())
+        .then(atm => {
+            document.getElementById("atmName").value = atm.name;
+            document.getElementById("atmAddress").value = atm.dia_chi;
+            document.getElementById("atmLatitude").value = atm.latitude;
+            document.getElementById("atmLongitude").value = atm.longitude;
+            document.getElementById("bankSelect").value = atm.bank.id;
+            document.getElementById("addATMForm").onsubmit = function(e) {
+                e.preventDefault();
+                const updatedATM = {
+                    name: document.getElementById("atmName").value,
+                    dia_chi: document.getElementById("atmAddress").value,
+                    latitude: parseFloat(document.getElementById("atmLatitude").value),
+                    longitude: parseFloat(document.getElementById("atmLongitude").value),
+                    bank_id: parseInt(document.getElementById("bankSelect").value)
+                };
+
+                fetch(`${apiUrl}/atm/${atmId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(updatedATM)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    loadATMs();
+                    document.getElementById("addATMForm").reset();
+                })
+                .catch(error => {
+                    console.error("Error updating ATM:", error);
+                    alert("Có lỗi xảy ra khi sửa ATM. Vui lòng thử lại.");
+                });
+            };
+        })
+        .catch(error => {
+            console.error("Error fetching ATM:", error);
+            alert("Không thể tải ATM để sửa. Vui lòng thử lại.");
+        });
+}
+
+
+        // Xóa ATM
+        function deleteATM(atmId) {
+            if (confirm("Bạn có chắc chắn muốn xóa ATM này?")) {
+                fetch(`${apiUrl}/atm/${atmId}`, {
+                    method: "DELETE"
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    loadATMs(); // Reload ATM list after deleting
+                })
+                .catch(error => {
+                    console.error("Error deleting ATM:", error);
+                    alert("Có lỗi xảy ra khi xóa ATM. Vui lòng thử lại.");
+                });
+            }
+        }
+
+        // Tải danh sách ATM ngay khi trang được load
+        loadATMs();
+    </script>
+</body>
+</html>
