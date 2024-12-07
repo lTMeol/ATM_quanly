@@ -1,69 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bản đồ ATM</title>
+    
+    <!-- Liên kết tới Leaflet CSS và JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+    <!-- Liên kết tới Leaflet Routing Machine -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-        }
 
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-
-        #searchBox {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            width: 250px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        #searchInput {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            font-size: 14px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-
-        #locateButton {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #locateButton:hover {
-            background-color: #0056b3;
-        }
-    </style>
+    <!-- Liên kết tới CSS riêng của bản đồ -->
+    <link rel="stylesheet" href="css/map.css">
 </head>
 <body>
+    <!-- Khung tìm kiếm ATM -->
     <div id="searchBox">
         <input type="text" id="searchInput" placeholder="Tìm kiếm ATM hoặc Ngân hàng..." />
     </div>
@@ -73,6 +27,9 @@
 
     <!-- Bản đồ -->
     <div id="map"></div>
+    
+    <!-- Kết quả tìm kiếm ATM -->
+    <div id="searchResults"></div>
 
     <script>
         // Tạo bản đồ
@@ -83,9 +40,16 @@
             maxZoom: 19,
         }).addTo(map);
 
+        // Khởi tạo control zoom ở vị trí góc trái dưới
+        L.control.zoom({
+            position: 'bottomleft'  // Di chuyển nút zoom sang góc trái dưới
+        }).addTo(map);
+
         let userMarker = null; // Marker cho vị trí hiện tại
         let routingControl = null; // Đối tượng Routing Machine
-
+        const atmMarkers = []; // Lưu danh sách marker
+        let atmList = []; // Lưu danh sách ATM
+    
         // Tạo icon tùy chỉnh cho vị trí người dùng
         const userIcon = L.icon({
             iconUrl: 'https://cdn-icons-png.flaticon.com/512/3177/3177361.png',
@@ -93,7 +57,7 @@
             iconAnchor: [20, 40],
             popupAnchor: [0, -40]
         });
-
+    
         // Hàm thêm marker ATM
         function addMarker(atm) {
             const marker = L.marker([atm.latitude, atm.longitude])
@@ -102,22 +66,26 @@
                     <b>${atm.name}</b><br>
                     Ngân hàng: ${atm.bank.name}<br>
                     Địa chỉ: ${atm.dia_chi || 'Chưa có địa chỉ'}<br>
-                    <button onclick="getDirections(${atm.latitude}, ${atm.longitude})">Chỉ đường</button>
+                    <div class="popup-buttons">
+                        <button onclick="getDirections(${atm.latitude}, ${atm.longitude})">Chỉ đường</button>
+                        <button onclick="removeRoute()">Bỏ chỉ đường</button>
+                    </div>
                 `);
+            atmMarkers.push(marker); // Lưu marker vào danh sách
         }
-
+    
         // Hàm chỉ đường
         function getDirections(lat, lng) {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     position => {
                         const { latitude, longitude } = position.coords;
-
+    
                         // Xóa tuyến đường cũ nếu tồn tại
                         if (routingControl) {
                             map.removeControl(routingControl);
                         }
-
+    
                         // Tạo tuyến đường mới
                         routingControl = L.Routing.control({
                             waypoints: [
@@ -125,6 +93,9 @@
                                 L.latLng(lat, lng)             // Vị trí ATM
                             ],
                             routeWhileDragging: true,
+                            lineOptions: {
+                                styles: [{ color: 'blue', opacity: 0.8, weight: 6 }] // Tùy chỉnh tuyến đường
+                            }
                         }).addTo(map);
                     },
                     error => {
@@ -135,14 +106,22 @@
                 alert('Trình duyệt của bạn không hỗ trợ định vị.');
             }
         }
-
+    
+        // Hàm bỏ chỉ đường
+        function removeRoute() {
+            if (routingControl) {
+                map.removeControl(routingControl); // Xóa tuyến đường
+                routingControl = null; // Đặt lại đối tượng routingControl
+            }
+        }
+    
         // Hiển thị vị trí hiện tại
         document.getElementById('locateButton').addEventListener('click', () => {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     position => {
                         const { latitude, longitude } = position.coords;
-
+    
                         // Thêm hoặc cập nhật marker cho vị trí người dùng
                         if (userMarker) {
                             userMarker.setLatLng([latitude, longitude]).openPopup();
@@ -152,7 +131,7 @@
                                 .bindPopup('Vị trí hiện tại của bạn')
                                 .openPopup();
                         }
-
+    
                         // Zoom vào vị trí hiện tại
                         map.setView([latitude, longitude], 16);
                     },
@@ -169,14 +148,52 @@
                 alert('Trình duyệt của bạn không hỗ trợ định vị.');
             }
         });
-
+    
         // Lấy danh sách ATM từ API
         fetch('http://localhost:5000/api/atm')
             .then(response => response.json())
             .then(data => {
-                data.forEach(atm => addMarker(atm));
+                atmList = data; // Lưu dữ liệu ATM vào danh sách
+                data.forEach(atm => addMarker(atm)); // Hiển thị tất cả các ATM trên bản đồ
             })
             .catch(err => console.error('Lỗi khi lấy dữ liệu ATM:', err));
+    
+        // Hàm tìm kiếm ATM
+        function searchATM(query) {
+            const filteredATMs = atmList.filter(atm => 
+                atm.name.toLowerCase().includes(query.toLowerCase()) ||
+                atm.bank.name.toLowerCase().includes(query.toLowerCase()) ||
+                (atm.dia_chi && atm.dia_chi.toLowerCase().includes(query.toLowerCase()))
+            );
+    
+            // Hiển thị kết quả tìm kiếm
+            const searchResults = document.getElementById('searchResults');
+            searchResults.innerHTML = ''; // Xóa kết quả cũ
+            if (filteredATMs.length > 0) {
+                searchResults.style.display = 'block'; // Hiển thị danh sách
+                filteredATMs.forEach(atm => {
+                    const item = document.createElement('div');
+                    item.classList.add('search-item');
+                    item.innerHTML = `${atm.name} - ${atm.bank.name}`;
+                    item.onclick = () => {
+                        // Zoom vào vị trí của ATM khi người dùng chọn
+                        map.setView([atm.latitude, atm.longitude], 16);
+                        // Tắt kết quả tìm kiếm
+                        searchResults.style.display = 'none';
+                    };
+                    searchResults.appendChild(item);
+                });
+            } else {
+                searchResults.style.display = 'none'; // Ẩn danh sách nếu không có kết quả
+            }
+        }
+    
+        // Xử lý sự kiện tìm kiếm
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value;
+            searchATM(query);
+        });
     </script>
 </body>
 </html>

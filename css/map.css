@@ -1,0 +1,165 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%; /* Đảm bảo chiều cao của body và html là 100% */
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+#searchBox {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 300px;
+    margin-bottom: 10px;
+}
+
+#searchInput {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+#locateButton {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#locateButton:hover {
+    background-color: #0056b3;
+}
+
+/* Danh sách kết quả tìm kiếm */
+#searchResults {
+    position: absolute;
+    top: 50px; /* Đặt vị trí bên dưới ô tìm kiếm */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 300px;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    display: none; /* Ẩn kết quả tìm kiếm ban đầu */
+}
+
+.search-item {
+    padding: 10px;
+    cursor: pointer;
+}
+
+.search-item:hover {
+    background-color: #f0f0f0;
+}
+
+/* Thêm CSS cho các nút trong popup */
+.popup-buttons {
+    display: flex;
+    justify-content: space-between; /* Đảm bảo hai nút nằm cạnh nhau */
+    gap: 10px; /* Khoảng cách giữa các nút */
+    margin-top: 10px; /* Khoảng cách giữa nội dung và các nút */
+}
+
+.popup-buttons button {
+    padding: 8px 12px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    flex-grow: 1; /* Đảm bảo các nút chiếm đều không gian */
+}
+
+/* Hiệu ứng hover cho nút */
+.popup-buttons button:hover {
+    background-color: #0056b3;
+    transform: scale(1.05); /* Phóng to nhẹ */
+}
+
+.popup-buttons button:focus {
+    outline: none;
+}
+
+/* Thêm hiệu ứng khi hover */
+.popup-buttons button:first-child {
+    background-color: #28a745; /* Màu cho nút "Chỉ đường" */
+}
+
+.popup-buttons button:first-child:hover {
+    background-color: #218838; /* Hiệu ứng hover */
+}
+
+.popup-buttons button:last-child {
+    background-color: #dc3545; /* Màu cho nút "Bỏ chỉ đường" */
+}
+
+.popup-buttons button:last-child:hover {
+    background-color: #c82333; /* Hiệu ứng hover */
+}
+
+/* Chỉnh sửa vị trí và kiểu dáng của nút zoom */
+.leaflet-control-zoom {
+    position: absolute;
+    bottom: 20px; /* Cách cạnh dưới 20px */
+    left: 20px;  /* Cách cạnh trái 20px */
+    background-color: rgba(255, 255, 255, 0.9); /* Nền trắng trong suốt */
+    border-radius: 10px; /* Bo góc */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* Hiệu ứng bóng */
+    padding: 5px; /* Khoảng cách trong */
+}
+
+/* Kiểu dáng cho các nút zoom */
+.leaflet-control-zoom a {
+    display: block;
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin: 4px 0;
+    transition: all 0.3s ease;
+}
+
+/* Hiệu ứng hover cho các nút zoom */
+.leaflet-control-zoom a:hover {
+    background-color: #e9ecef;
+    color: #007bff;
+    border-color: #007bff;
+    transform: scale(1.1); /* Phóng to nhẹ */
+}
+
+/* Đảm bảo nút zoom không bị ảnh hưởng bởi các control khác */
+.leaflet-control-zoom a:focus {
+    outline: none;
+}
+
